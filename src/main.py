@@ -2,6 +2,7 @@ import sys
 import pygame as pg
 
 import configuration
+import game
 
 
 class Main:
@@ -12,6 +13,9 @@ class Main:
         self.screen = pg.display.set_mode(self.config.getResolution(), self.config.getWindowMode())
         self.clock = pg.time.Clock()
         self.delta_time = 1
+
+        ## setting default window as game
+        self.window = game.Game(self)
 
     def update(self):
         for event in pg.event.get():
@@ -24,8 +28,12 @@ class Main:
         self.delta_time = self.clock.tick(self.config.getFPSLock())
         pg.display.set_caption(f'{self.clock.get_fps() :.1f}')
 
+        self.window.update()
+
     def draw(self):
         self.screen.fill((0, 0, 0))
+
+        self.window.draw()
 
     def run(self):
         while True:
