@@ -18,6 +18,6 @@ class Map:
             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
         ]
 
-        self.start = (1, 1)
+        self.start = (1.5, 1.5)
 
         self.exit = (8, 8)

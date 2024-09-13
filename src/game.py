@@ -23,8 +23,17 @@ class Game:
         self.map.load_map()
         self.player.set_position(self.map.start[0], self.map.start[1])
 
-    def collision_check(self):
-        return False
+    def collision_check(self, position, dx, dy):
+        safe_distance = 0.2
+        x = position[0] + dx
+        y = position[1] + dy
+
+        if x >= 0 and y >= 0:
+            i = int(x + safe_distance * (1 if dx > 0 else -1))
+            j = int(y + safe_distance * (1 if dy > 0 else -1))
+
+            if self.map.map[j][i] != 1:
+                self.player.set_position(x, y)
 
     def update(self):
         angle = self.player.get_angle()
@@ -71,29 +80,36 @@ class Game:
                 math.pi / 2000
             ) * self.game.delta_time  ## fix rotation speed to config
 
-        if not self.collision_check():
-            x = position[0] + dx
-            y = position[1] + dy
+        self.collision_check(position, dx, dy)
 
-            self.player.set_position(x, y)
-            self.player.set_angle(angle)
+        self.player.set_angle(angle)
 
     ## draw 2d
     def draw(self):
+        scale = 20
         angle = self.player.get_angle()
         position = self.player.get_position()
 
+        ## drawing map
+        for y in range(10):
+            for x in range(10):
+                if self.map.map[y][x] == 1:
+                    pg.draw.rect(
+                        self.game.screen, "white", (x * scale, y * scale, scale, scale)
+                    )
+
+        ## drawing player
         pg.draw.circle(
-            self.game.screen, "green", (position[0] * 10, position[1] * 10), 5
+            self.game.screen, "green", (position[0] * scale, position[1] * scale), 5
         )
 
         pg.draw.line(
             self.game.screen,
             "red",
-            (position[0] * 10, position[1] * 10),
+            (position[0] * scale, position[1] * scale),
             (
-                position[0] * 10 + 20 * 10 * math.cos(angle),
-                position[1] * 10 + 20 * 10 * math.sin(angle),
+                position[0] * scale + 20 * scale * math.cos(angle),
+                position[1] * scale + 20 * scale * math.sin(angle),
             ),
             1,
         )
