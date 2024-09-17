@@ -24,7 +24,7 @@ class Game:
         self.player.set_position(self.map.start[0], self.map.start[1])
 
     def collision_check(self, position, dx, dy):
-        safe_distance = 0.2
+        safe_distance = 0.3
         x = position[0] + dx
         y = position[1] + dy
 
