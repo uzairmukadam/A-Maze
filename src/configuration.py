@@ -1,5 +1,6 @@
 import os
 import configparser
+import math
 import pygame as pg
 
 
@@ -16,6 +17,13 @@ class Config:
                 "window_mode": 0,
                 "fps": 0,
             }
+
+            self.config["graphics parameters"] = {
+                "fov": 60,
+                "drawdistance": 5,
+                "scale": 1,
+            }
+
             with open(config_file, "w") as configfile:
                 self.config.write(configfile)
 
@@ -35,3 +43,9 @@ class Config:
     def getFPSLock(self):
         fps = self.config.getint("windows parameters", "fps")
         return fps
+
+    def getPlayerSpeed(self):
+        return 1 / 400
+
+    def getRotationSpeed(self):
+        return math.pi / 2000

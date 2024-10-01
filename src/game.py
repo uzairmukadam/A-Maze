@@ -35,6 +35,15 @@ class Game:
             if self.map.map[j][i] != 1:
                 self.player.set_position(x, y)
 
+    def check_exit(self, position):
+        i = int(position[0])
+        j = int(position[1])
+
+        if (i, j) == self.map.exit_block:
+            print("Exit")
+        else:
+            print("Null")
+
     def update(self):
         angle = self.player.get_angle()
         position = self.player.get_position()
@@ -44,7 +53,7 @@ class Game:
         sin_b = math.sin(angle + (math.pi / 2))
         cos_b = math.cos(angle + (math.pi / 2))
 
-        speed = (1 / 400) * self.game.delta_time  # fix player speed to config
+        speed = self.game.config.getPlayerSpeed() * self.game.delta_time
         sin_speed = speed * sin_a
         cos_speed = speed * cos_a
         sin_side_speed = speed * sin_b * 0.5
@@ -71,18 +80,19 @@ class Game:
             dy += sin_side_speed
 
         if keys[pg.K_LEFT]:
-            angle -= (
-                math.pi / 2000
-            ) * self.game.delta_time  ## fix rotation speed to config
+            angle -= (self.game.config.getRotationSpeed()) * self.game.delta_time
 
         if keys[pg.K_RIGHT]:
-            angle += (
-                math.pi / 2000
-            ) * self.game.delta_time  ## fix rotation speed to config
+            angle += (self.game.config.getRotationSpeed()) * self.game.delta_time
 
         self.collision_check(position, dx, dy)
 
         self.player.set_angle(angle)
+
+        position = self.player.get_position()
+
+        if keys[pg.K_SPACE]:
+            self.check_exit(position)
 
     ## draw 2d
     def draw(self):
@@ -91,11 +101,18 @@ class Game:
         position = self.player.get_position()
 
         ## drawing map
-        for y in range(10):
-            for x in range(10):
+        for y in range(20):
+            for x in range(20):
                 if self.map.map[y][x] == 1:
                     pg.draw.rect(
                         self.game.screen, "white", (x * scale, y * scale, scale, scale)
+                    )
+                else:
+                    pg.draw.rect(
+                        self.game.screen,
+                        "yellow",
+                        (x * scale, y * scale, scale, scale),
+                        1,
                     )
 
         ## drawing player
