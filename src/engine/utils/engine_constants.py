@@ -1,0 +1,16 @@
+class EngineConstants:
+    # Window and Display
+    DEFAULT_RESOLUTION = [1280, 720]
+    DEFAULT_FULLSCREEN = False
+    DEFAULT_BORDERLESS = False
+    DEFAULT_FPS_LIMIT = 60
+    
+    # Rendering
+    DEFAULT_FOV = 75
+    DEFAULT_RENDER_SCALE = 1.0
+    DEFAULT_DRAW_DISTANCE = 10
+
+    # UI/Menu
+    SPLASH_DURATION_MS = 2500
+    MENU_FONT_SIZE = 48
+    MENU_COOLDOWN_MS = 150

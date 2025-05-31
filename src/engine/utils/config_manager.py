@@ -1,43 +1,23 @@
-# src/engine/utils/config_manager.py
 import json
 import os
+from src.engine.utils.engine_constants import EngineConstants
 
 class ConfigManager:
-    """
-    Manages loading, saving, and accessing game configuration settings.
-    Ensures a default configuration exists if no file is found or if it's invalid.
-    This manager now focuses *only* on user-modifiable settings stored in settings.json.
-    """
-    # Only settings that the user can change via settings.json
     DEFAULT_CONFIG = {
-        "resolution": [1280, 720],
-        "fullscreen": False,
-        "borderless": False,
-        "fps_limit": 60,
-        "fov": 75,
-        "scale": 1.0,
-        "draw_distance": 3 # Renamed from render_distance
+        "resolution": EngineConstants.DEFAULT_RESOLUTION,
+        "fullscreen": EngineConstants.DEFAULT_FULLSCREEN,
+        "borderless": EngineConstants.DEFAULT_BORDERLESS,
+        "fps_limit": EngineConstants.DEFAULT_FPS_LIMIT,
+        "fov": EngineConstants.DEFAULT_FOV,
+        "scale": EngineConstants.DEFAULT_RENDER_SCALE,
+        "draw_distance": EngineConstants.DEFAULT_DRAW_DISTANCE
     }
 
-    def __init__(self, config_path: str = "assets/settings.json"):
-        """
-        Initializes the ConfigManager and loads the configuration.
-
-        Args:
-            config_path (str): The path to the configuration JSON file.
-        """
+    def __init__(self, config_path="assets/settings.json"):
         self.config_path = config_path
         self.config = self.load_config()
 
-    def load_config(self) -> dict:
-        """
-        Loads the config file. If missing, creates a default.
-        Merges loaded config with default settings to handle new config fields
-        and ensure all necessary settings are present.
-
-        Returns:
-            dict: The loaded and merged configuration dictionary.
-        """
+    def load_config(self):
         loaded_config = {}
         if not os.path.exists(self.config_path):
             print(f"[INFO] Config file '{self.config_path}' missing, creating default settings...")
@@ -52,23 +32,18 @@ class ConfigManager:
                 loaded_config = self.DEFAULT_CONFIG
                 self.save_config(self.DEFAULT_CONFIG)
 
-        merged_config = self.DEFAULT_CONFIG.copy()
-        # Merge only keys that are in DEFAULT_CONFIG (to handle older config files gracefully)
-        # This ensures we only keep the keys we expect in settings.json
-        for key in merged_config:
+        current_config = self.DEFAULT_CONFIG.copy()
+        for key in current_config:
             if key in loaded_config:
-                merged_config[key] = loaded_config[key]
+                current_config[key] = loaded_config[key]
         
-        # Check if the loaded config had extra keys not in DEFAULT_CONFIG (which we'll ignore)
-        # or if DEFAULT_CONFIG added new keys (which we'll save)
-        if merged_config != loaded_config: # Compare only the relevant keys
+        if current_config != loaded_config:
             print("[INFO] Config file updated with new default settings or missing keys, or removed old keys.")
-            self.save_config(merged_config)
+            self.save_config(current_config)
 
-        return merged_config
+        return current_config
 
-    def save_config(self, config_data: dict):
-        """Saves the given config data back to the file."""
+    def save_config(self, config_data):
         os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
         try:
             with open(self.config_path, "w") as f:

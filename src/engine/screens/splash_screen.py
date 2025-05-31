@@ -1,19 +1,9 @@
 # src/engine/screens/splash_screen.py
 import pygame
-from src.engine.utils.game_constants import GameConstants # Import GameConstants
+from src.engine.utils.engine_constants import EngineConstants
 
 class SplashScreen:
-    """
-    Displays a sequence of text messages with fade-in/fade-out effects.
-    Ideal for game intros or credits.
-    """
-    def __init__(self, window: pygame.Surface): # Removed config
-        """
-        Initializes the SplashScreen.
-
-        Args:
-            window (pygame.Surface): The Pygame surface to draw the splash screen on.
-        """
+    def __init__(self, window):
         self.window = window
 
         self.sequence = [
@@ -23,22 +13,14 @@ class SplashScreen:
 
         self.current_index = 0
         self.start_time = pygame.time.get_ticks()
-        # Use constant from GameConstants
-        self.duration = GameConstants.SPLASH_DURATION_MS
-        self.fade_in_time = 1000 # Can also be a constant
-        self.fade_out_start = self.duration - 500 # Can also be derived from constants
-        self.fade_out_duration = 500 # Can also be a constant
+        self.duration = EngineConstants.SPLASH_DURATION_MS
+        self.fade_in_time = 1000
+        self.fade_out_start = self.duration - 500
+        self.fade_out_duration = 500
 
         self.alpha = 0
 
-    def update(self) -> bool:
-        """
-        Updates the splash screen's animation and transitions between text.
-        This method does NOT process input events directly.
-
-        Returns:
-            bool: True if the splash screen is still active (not finished), False otherwise.
-        """
+    def update(self):
         if self.current_index >= len(self.sequence):
             return False
 
@@ -60,9 +42,6 @@ class SplashScreen:
         return self.current_index < len(self.sequence)
 
     def draw(self):
-        """
-        Renders the current text message of the splash screen.
-        """
         if self.current_index >= len(self.sequence):
             return
 
