@@ -1,0 +1,20 @@
+{
+  "mazeName": "Beginner's Labyrinth",
+  "mazeData": [
+    [1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 0, 1, 0, 1],
+    [1, 0, 0, 0, 1, 0, 1],
+    [1, 0, 1, 1, 1, 0, 1],
+    [1, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1]
+  ],
+  "startCoordinate": [1, 1],
+  "endCoordinate": [5, 5],
+  "scoreboard": [],
+  "metadata": {
+    "creatorName": "AI Maze Builder",
+    "creatorContact": "creator@example.com",
+    "description": "A simple 5x5 maze for new players to practice."
+  }
+}

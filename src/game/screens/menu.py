@@ -1,5 +1,5 @@
 import pygame
-from src.engine.utils.engine_constants import EngineConstants
+from src.game.constants import Constants
 
 class Menu:
     def __init__(self, window, options):
@@ -7,9 +7,9 @@ class Menu:
         self.options = options
         self.selected_index = 0
         
-        self.font = pygame.font.Font(None, EngineConstants.MENU_FONT_SIZE)
+        self.font = pygame.font.Font(None, Constants.MENU_FONT_SIZE)
         self.cooldown_start_time = 0
-        self.cooldown_duration = EngineConstants.MENU_COOLDOWN_MS
+        self.cooldown_duration = Constants.MENU_COOLDOWN_MS
 
     def update(self, events):
         current_time = pygame.time.get_ticks()
@@ -26,7 +26,7 @@ class Menu:
                     self.reset_cooldown()
                 elif event.key == pygame.K_RETURN:
                     selected_event = self.options[self.selected_index].get("event")
-                    if selected_event:
+                    if selected_event is not None:
                         self.reset_cooldown()
                         return selected_event
         return None

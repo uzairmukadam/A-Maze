@@ -1,9 +1,19 @@
-# src/engine/screens/splash_screen.py
+# src/game/screens/splash_screen.py
 import pygame
-from src.engine.utils.engine_constants import EngineConstants
+from src.game.constants import Constants
 
 class SplashScreen:
+    """
+    Manages the display and transitions of the game's splash screen sequence.
+    Displays a series of text messages with fade-in/fade-out effects.
+    """
     def __init__(self, window):
+        """
+        Initializes the SplashScreen with the display window and predefined sequence.
+
+        Args:
+            window (pygame.Surface): The main display surface for rendering.
+        """
         self.window = window
 
         self.sequence = [
@@ -13,14 +23,22 @@ class SplashScreen:
 
         self.current_index = 0
         self.start_time = pygame.time.get_ticks()
-        self.duration = EngineConstants.SPLASH_DURATION_MS
+        
+        self.duration = Constants.SPLASH_DURATION_MS
         self.fade_in_time = 1000
-        self.fade_out_start = self.duration - 500
         self.fade_out_duration = 500
+        self.fade_out_start = self.duration - self.fade_out_duration
 
         self.alpha = 0
 
     def update(self):
+        """
+        Updates the state of the splash screen, including alpha values for fading
+        and transitioning to the next item in the sequence.
+
+        Returns:
+            bool: True if the splash screen sequence is still ongoing, False if it has finished.
+        """
         if self.current_index >= len(self.sequence):
             return False
 
@@ -42,6 +60,9 @@ class SplashScreen:
         return self.current_index < len(self.sequence)
 
     def draw(self):
+        """
+        Draws the current text item of the splash screen to the window with the calculated alpha.
+        """
         if self.current_index >= len(self.sequence):
             return
 
@@ -49,7 +70,7 @@ class SplashScreen:
         
         font_size = int(self.window.get_height() * current_sequence_item["font_size_ratio"])
         font = pygame.font.Font(None, font_size)
-        
+
         text_surface = font.render(current_sequence_item["text"], True, (255, 255, 255))
         text_surface.set_alpha(self.alpha)
 

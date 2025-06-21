@@ -5,8 +5,5 @@
     ],
     "fullscreen": false,
     "borderless": false,
-    "fps_limit": 60,
-    "fov": 75,
-    "scale": 1.0,
-    "draw_distance": 3
+    "fps_limit": 60
 }

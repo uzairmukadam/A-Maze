@@ -1,98 +1,142 @@
-# src/game/game.py
-import pygame
+import os
+import json
 
-from src.game.screens.algorithm_menu import AlgorithmMenu
-from src.game.screens.load_map_menu import LoadMapMenu
-
-from src.game.maze_generator.predefined import Predefined
-
+from src.game.screens.map_menu import MapMenu
 from src.game.game_logic.game_logic import GameLogic
-
+from src.game.screens.game_over_menu import GameOverMenu
 
 class GameState:
-    """
-    Defines the states within the main game module (not the engine).
-    """
-    ALGORITHM_MENU = "algorithm_menu"
-    LOAD_MAP = "load_map"
+    MAP_MENU = "map_menu"
     GAMEPLAY = "gameplay"
     GAME_OVER = "game_over"
 
-
 class Game:
-    """
-    Manages the overall game flow, including maze selection, gameplay,
-    and transitions between game-specific screens.
-    """
-    def __init__(self, window: pygame.Surface, config: dict, load_map_directly: bool = False):
-        """
-        Initializes the Game module.
-
-        Args:
-            window (pygame.Surface): The Pygame surface to draw game elements on.
-            config (dict): The game configuration dictionary.
-            load_map_directly (bool): If True, starts directly in the load map menu.
-        """
+    def __init__(self, window, config):
         self.window = window
         self.config = config
 
-        self.state = GameState.LOAD_MAP if load_map_directly else GameState.ALGORITHM_MENU
-        self.maze_data = None
+        self.maps = self.get_maps()
+        self.current_map = None
 
-        self.algorithm_menu = AlgorithmMenu(self.window, self.config)
-        self.load_map_menu = LoadMapMenu(self.window, self.config)
+        self.state = GameState.MAP_MENU
+
+        self.map_menu = MapMenu(self.window, self.maps)
         self.game_logic = None
+        self.game_over_screen = None
 
-    def _start_gameplay(self, maze_data: dict):
+    def read_files(self, relative_dir="assets/maps"):
         """
-        Helper method to transition to gameplay state after a maze is selected/generated.
+        Reads JSON map files from a specified directory relative to the project root.
+        This makes the map loading more robust regardless of the current working directory.
         """
-        self.maze_data = maze_data
-        self.game_logic = GameLogic(self.window, self.maze_data, self.config)
-        self.state = GameState.GAMEPLAY
+        files = []
 
-    def update(self, events: list[pygame.event.Event]) -> str | None:
-        """
-        Updates the logic for the current game state based on a list of events.
+        current_file_dir = os.path.dirname(__file__)
+        src_dir = os.path.dirname(current_file_dir)
+        project_root = os.path.dirname(src_dir)
 
-        Args:
-            events (list[pygame.event.Event]): A list of all Pygame events for the current frame.
+        absolute_maps_dir = os.path.join(project_root, relative_dir)
 
-        Returns:
-            str | None: An action string (e.g., "back", "pause") to be handled by the Engine,
-                        or None if no state transition is required.
-        """
-        if self.state == GameState.ALGORITHM_MENU:
-            action = self.algorithm_menu.update(events) # Pass all events
-            if action == "predefined":
-                predefined_maze_generator = Predefined(self.config)
-                self._start_gameplay(predefined_maze_generator.get_maze())
-            elif action == "back":
-                return "back"
-            
-        elif self.state == GameState.LOAD_MAP:
-            action = self.load_map_menu.update(events) # Pass all events
-            if action == "map_1":
-                predefined_maze_generator = Predefined(self.config)
-                self._start_gameplay(predefined_maze_generator.get_maze())
-            elif action == "back":
-                return "back"
+        if not os.path.isdir(absolute_maps_dir):
+            print(f"Error: Map directory not found at '{absolute_maps_dir}'")
+            return []
+        
+        for filename in os.listdir(absolute_maps_dir):
+            if filename.endswith(".json"):
+                file_path = os.path.join(absolute_maps_dir, filename)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        files.append({"filename": filename, "data": data})
+                except json.JSONDecodeError as e:
+                    print(f"Error: Skipping '{filename}'. Not a valid JSON file. Details: {e}")
+                except Exception as e:
+                    print(f"Error: Could not read '{filename}'. Details: {e}")
+
+        return files
+
+    def load_game(self, id):
+        """Loads a specific maze based on its ID."""
+        found_map = None
+        for map_item in self.maps:
+            if map_item["id"] == id:
+                found_map = map_item
+                break
+
+        if found_map:
+            self.current_map = found_map
+            self.game_logic = GameLogic(self.window, self.config, self.current_map["data"])
+        else:
+            print(f"[ERROR] Map with ID {id} not found.")
+
+
+    def verify_maps(self, files):
+        """Verifies the structure of loaded maze files."""
+        mazes = []
+        required_keys = ["mazeName", "mazeData", "startCoordinate", "endCoordinate"]
+        
+        current_id = 0
+
+        for file_data in files:
+            is_valid = True
+            for key in required_keys:
+                if key not in file_data["data"]:
+                    print(f"[WARNING] Map file '{file_data['filename']}' is missing key: '{key}'. Skipping.")
+                    is_valid = False
+                    break
+
+            if is_valid:
+                file_data["id"] = current_id
+                current_id += 1
+                mazes.append(file_data)
+
+        return mazes
+
+    def get_maps(self):
+        """Retrieves and verifies all available map files."""
+        files = self.read_files()
+        return self.verify_maps(files)
+
+    def update(self, events):
+        """Updates the current game state."""
+        action = None
+
+        if self.state == GameState.MAP_MENU:
+            action = self.map_menu.update(events)
+            if action == "main_menu":
+                return action
+            elif isinstance(action, int):
+                self.load_game(action)
+                self.state = GameState.GAMEPLAY
             
         elif self.state == GameState.GAMEPLAY:
-            # GameLogic handles its own internal events and updates, and pygame.key.get_pressed()
-            game_action = self.game_logic.update(events) # Pass all events
-            if game_action == "pause":
+            if self.game_logic:
+                action = self.game_logic.update(events)
+            
+            if action == "pause":
                 return "pause"
+            elif action == "game_over":
+                total_time = self.game_logic.get_score() if self.game_logic else 0
+                score = {"filename": self.current_map["filename"] if self.current_map else "Unknown", "total_time": total_time}
+                self.game_over_screen = GameOverMenu(self.window, score)
+                self.state = GameState.GAME_OVER
+
+        elif self.state == GameState.GAME_OVER:
+            if self.game_over_screen:
+                action = self.game_over_screen.update(events)
+            if action == "main_menu":
+                return action
 
         return None
 
     def draw(self):
-        """
-        Renders the visuals for the current game state.
-        """
-        if self.state == GameState.ALGORITHM_MENU:
-            self.algorithm_menu.draw()
-        elif self.state == GameState.LOAD_MAP:
-            self.load_map_menu.draw()
+        """Draws the current game state."""
+        if self.state == GameState.MAP_MENU:
+            self.map_menu.draw()
         elif self.state == GameState.GAMEPLAY:
-            self.game_logic.draw()
+            if self.game_logic:
+                self.game_logic.draw()
+        elif self.state == GameState.GAME_OVER:
+            if self.game_over_screen:
+                self.game_over_screen.draw()
+

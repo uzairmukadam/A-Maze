@@ -1,20 +1,26 @@
 import json
 import os
-from src.engine.utils.engine_constants import EngineConstants
+from src.game.constants import Constants
 
 class ConfigManager:
     DEFAULT_CONFIG = {
-        "resolution": EngineConstants.DEFAULT_RESOLUTION,
-        "fullscreen": EngineConstants.DEFAULT_FULLSCREEN,
-        "borderless": EngineConstants.DEFAULT_BORDERLESS,
-        "fps_limit": EngineConstants.DEFAULT_FPS_LIMIT,
-        "fov": EngineConstants.DEFAULT_FOV,
-        "scale": EngineConstants.DEFAULT_RENDER_SCALE,
-        "draw_distance": EngineConstants.DEFAULT_DRAW_DISTANCE
+        "resolution": Constants.DEFAULT_RESOLUTION,
+        "fullscreen": Constants.DEFAULT_FULLSCREEN,
+        "borderless": Constants.DEFAULT_BORDERLESS,
+        "fps_limit": Constants.DEFAULT_FPS_LIMIT
     }
 
-    def __init__(self, config_path="assets/settings.json"):
-        self.config_path = config_path
+    def __init__(self, config_filename="settings.json"):
+        """
+        Initializes the ConfigManager.
+        The config_filename is expected to be relative to the project root.
+        """
+        script_dir = os.path.dirname(__file__)
+        game_dir = os.path.dirname(script_dir)
+        src_dir = os.path.dirname(game_dir)
+        project_root = os.path.dirname(src_dir)
+
+        self.config_path = os.path.join(project_root, config_filename)
         self.config = self.load_config()
 
     def load_config(self):
@@ -31,6 +37,9 @@ class ConfigManager:
                 print(f"[ERROR] Could not decode config file: {e}. Using default settings and overwriting.")
                 loaded_config = self.DEFAULT_CONFIG
                 self.save_config(self.DEFAULT_CONFIG)
+            except IOError as e:
+                print(f"[ERROR] Could not read config file '{self.config_path}': {e}. Using default settings.")
+                loaded_config = self.DEFAULT_CONFIG
 
         current_config = self.DEFAULT_CONFIG.copy()
         for key in current_config:
@@ -49,4 +58,5 @@ class ConfigManager:
             with open(self.config_path, "w") as f:
                 json.dump(config_data, f, indent=4)
         except IOError as e:
-            print(f"[ERROR] Could not save config file: {e}")
+            print(f"[ERROR] Could not save config file '{self.config_path}': {e}")
+

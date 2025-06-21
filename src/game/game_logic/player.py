@@ -1,105 +1,139 @@
 # src/game/game_logic/player.py
-import pygame
 import math
-from src.engine.utils.map import Map
+import pygame
+from src.game.constants import Constants
 
 class Player:
     """
-    Manages the player's position, orientation, and movement within the maze.
-    Handles collision detection with maze walls.
+    Represents the player character within the maze.
+    Handles player position, orientation, movement, collision detection, and maze completion.
     """
-    def __init__(self, initial_pos: tuple[float, float], initial_angle: float, 
-                 maze: Map, speed: float = 0.05, rotation_speed: float = 0.05,
-                 collision_radius: float = 0.2): # Added collision_radius to constructor
+    def __init__(self, maze):
         """
-        Initializes the Player.
+        Initializes the Player with maze-specific data and default constants.
 
         Args:
-            initial_pos (tuple[float, float]): The starting (x, y) coordinates of the player.
-            initial_angle (float): The initial viewing angle of the player in radians.
-            maze (Map): The Map object representing the game maze.
-            speed (float): The movement speed of the player.
-            rotation_speed (float): The rotation speed of the player.
-            collision_radius (float): The radius used for collision detection around the player.
+            maze (dict): A dictionary containing maze details like 'mazeData',
+                         'startCoordinate', and 'endCoordinate'.
         """
-        self.x, self.y = initial_pos
-        self.angle = initial_angle
-        self.maze = maze
+        self.x, self.y = [0.0, 0.0]
+        self.angle = 0.0
 
-        self.speed = speed
-        self.rotation_speed = rotation_speed
-        self.collision_radius = collision_radius # Assigned from constructor
+        # Store maze properties
+        self.maze_data = maze["mazeData"]
+        self.maze_start = maze["startCoordinate"]
+        self.maze_end = maze["endCoordinate"]
 
-    @property
-    def pos(self) -> tuple[float, float]:
-        """Returns the current position of the player."""
-        return (self.x, self.y)
+        self.speed = Constants.PLAYER_SPEED
+        self.rotation_speed = Constants.PLAYER_ROTATION_SPEED
+        self.collision_radius = Constants.PLAYER_COLLISION_RADIUS
 
-    def _check_collision(self, new_x: float, new_y: float) -> bool:
+        self.get_start_values()
+
+    def get_start_values(self):
         """
-        Checks if a new position collides with a wall in the maze.
-        Uses a collision radius for better player movement experience.
+        Calculates and sets the player's initial precise position (centered in start cell)
+        and orientation based on the maze's start coordinate and surrounding walls.
         """
-        # Define corner points relative to the player's new center
-        # These points are checked for collision
-        corners = [
-            (new_x - self.collision_radius, new_y - self.collision_radius),
-            (new_x + self.collision_radius, new_y - self.collision_radius),
-            (new_x - self.collision_radius, new_y + self.collision_radius),
-            (new_x + self.collision_radius, new_y + self.collision_radius)
-        ]
+        start_x_centered = self.maze_start[0] + 0.5
+        start_y_centered = self.maze_start[1] + 0.5
+        self.x, self.y = [start_x_centered, start_y_centered]
 
+        start_row, start_col = self.maze_start[1], self.maze_start[0]
+
+        if start_row - 1 >= 0 and self.maze_data[start_row - 1][start_col] == 0:
+            self.angle = 3 * math.pi / 2
+        elif start_col + 1 < len(self.maze_data[0]) and self.maze_data[start_row][start_col + 1] == 0:
+            self.angle = 0
+        elif start_row + 1 < len(self.maze_data) and self.maze_data[start_row + 1][start_col] == 0:
+            self.angle = math.pi / 2
+        elif start_col - 1 >= 0 and self.maze_data[start_row][start_col - 1] == 0:
+            self.angle = math.pi
+        else:
+            print(f"[WARNING] Player start at {self.maze_start} is surrounded by walls or invalid path.")
+            self.angle = 0
+
+    def check_collision(self, target_x, target_y):
+        """
+        Checks for collision at a given target (x, y) position using the player's collision radius.
+        It checks the four corners of the player's bounding box against maze walls.
+
+        Args:
+            target_x (float): The X-coordinate to check.
+            target_y (float): The Y-coordinate to check.
+
+        Returns:
+            bool: True if a collision with a wall (value 1) is detected, False otherwise.
+        """
+        corners = [(target_x + self.collision_radius, target_y + self.collision_radius),
+                   (target_x + self.collision_radius, target_y - self.collision_radius),
+                   (target_x - self.collision_radius, target_y + self.collision_radius),
+                   (target_x - self.collision_radius, target_y - self.collision_radius)]
+        
         for cx, cy in corners:
             grid_x = int(cx)
             grid_y = int(cy)
 
-            # Check if out of bounds or colliding with a wall (value 1)
-            # Ensure grid_y and grid_x are within valid maze dimensions
-            if not (0 <= grid_y < self.maze.height and 0 <= grid_x < self.maze.width) or \
-               self.maze.grid[grid_y][grid_x] == 1:
-                return True # Collision detected
+            if 0 <= grid_y < len(self.maze_data) and 0 <= grid_x < len(self.maze_data[0]):
+                if self.maze_data[grid_y][grid_x] == 1:
+                    return True
+            else:
+                return True
+            
+        return False
 
-        return False # No collision
-
-    def _move(self, dx: float, dy: float):
+    def move(self, dx, dy):
         """
-        Attempts to move the player by (dx, dy) applying collision detection.
-        Performs sliding collision if only one axis collides.
-        """
-        # Attempt move in X direction first
-        new_x = self.x + dx
-        if not self._check_collision(new_x, self.y):
-            self.x = new_x
-        else:
-            # If X collides, try moving only Y
-            if not self._check_collision(self.x, self.y + dy):
-                self.y += dy
-            return
+        Attempts to move the player by (dx, dy) respecting maze collisions.
+        This implementation checks X and Y movement independently, allowing for
+        sliding along walls if one component of a diagonal move is blocked.
 
-        # If X was successful, attempt move in Y direction
-        new_y = self.y + dy
-        if not self._check_collision(self.x, new_y):
-            self.y = new_y
+        Args:
+            dx (float): Change in X-coordinate.
+            dy (float): Change in Y-coordinate.
+        """
+        potential_x = self.x + dx
+        if not self.check_collision(potential_x, self.y):
+            self.x = potential_x
+        
+        potential_y = self.y + dy
+        if not self.check_collision(self.x, potential_y):
+            self.y = potential_y
+
+    def check_end(self):
+        """
+        Checks if the player has reached the maze's end coordinate.
+
+        Returns:
+            bool: True if the player's current grid cell matches the end coordinate, False otherwise.
+        """
+        current_grid_x = int(self.x)
+        current_grid_y = int(self.y)
+
+        if self.maze_end == [current_grid_x, current_grid_y]:
+            return True
+        return False
 
     def update(self):
         """
-        Updates the player's position and angle based on keyboard input.
-        This method uses pygame.key.get_pressed() for continuous movement.
+        Updates the player's state based on user input (keyboard presses).
+        Handles movement and rotation.
+
+        Returns:
+            str or None: "end" if the player reaches the maze end, otherwise None.
         """
         keys = pygame.key.get_pressed()
 
-        # Movement (W/S or Up/Down)
         if keys[pygame.K_UP] or keys[pygame.K_w]:
             dx = self.speed * math.cos(self.angle)
             dy = self.speed * math.sin(self.angle)
-            self._move(dx, dy)
+            self.move(dx, dy)
 
         if keys[pygame.K_DOWN] or keys[pygame.K_s]:
             dx = -self.speed * math.cos(self.angle)
             dy = -self.speed * math.sin(self.angle)
-            self._move(dx, dy)
+            self.move(dx, dy)
 
-        # Rotation (A/D or Left/Right)
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             self.angle -= self.rotation_speed
 
@@ -108,16 +142,7 @@ class Player:
 
         self.angle %= (2 * math.pi)
 
-    def check_end_condition(self, end_point: tuple[int, int]) -> bool:
-        """
-        Checks if the player has reached the end point of the maze.
+        if self.check_end():
+            return "end"
 
-        Args:
-            end_point (tuple[int, int]): The (x, y) grid coordinates of the maze's end.
-
-        Returns:
-            bool: True if player is at or near the end point, False otherwise.
-        """
-        end_tile_x, end_tile_y = end_point
-        # Consider the player to have reached the end if their center is within the end tile
-        return int(self.x) == end_tile_x and int(self.y) == end_tile_y
+        return None
