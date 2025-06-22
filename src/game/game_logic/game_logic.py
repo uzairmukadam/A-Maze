@@ -7,8 +7,9 @@ from src.game.constants import Constants
 class GameLogic:
     """
     Manages core game logic, including maze, player, and game state.
-    Renders 3D walls using raycasting with DDA, distance-based fading,
-    and pulsating highlight for the end block. Includes a timer display.
+    Renders 3D walls using raycasting with DDA, distance-based fading.
+    The end block glows in the 3D view.
+    Includes a timer display.
     """
     def __init__(self, window, config, maze):
         self.window = window
@@ -23,7 +24,7 @@ class GameLogic:
         self.screen_width, self.screen_height = self.window.get_size()
         self.half_screen_height = self.screen_height // 2
 
-        self.fov = math.radians(Constants.DEFAULT_FOV)
+        self.fov = math.radians(Constants.FOV)
         self.half_fov = self.fov / 2
         self.angle_increment = self.fov / self.screen_width
 
@@ -63,20 +64,15 @@ class GameLogic:
         return None
 
     def draw(self):
-        self._draw_ceiling_and_floor_background()
-        self._draw_walls_raycasting()
+        self.draw_ceiling_and_floor_background()
+        self.draw_walls_raycasting()
         self.draw_timer()
 
-    def _draw_ceiling_and_floor_background(self):
+    def draw_ceiling_and_floor_background(self):
         pygame.draw.rect(self.window, Constants.CEILING_COLOR, (0, 0, self.screen_width, self.half_screen_height))
         pygame.draw.rect(self.window, Constants.FLOOR_COLOR, (0, self.half_screen_height, self.screen_width, self.half_screen_height))
 
-    def _is_adjacent_to_point(self, wall_x, wall_y, target_x, target_y):
-        dx = abs(wall_x - target_x)
-        dy = abs(wall_y - target_y)
-        return (dx == 1 and dy == 0) or (dx == 0 and dy == 1)
-
-    def _cast_single_ray(self, start_pos_x, start_pos_y, ray_angle):
+    def cast_single_ray(self, start_pos_x, start_pos_y, ray_angle):
         cos_ray = math.cos(ray_angle)
         sin_ray = math.sin(ray_angle)
 
@@ -130,7 +126,7 @@ class GameLogic:
                 hit_side = 1
 
             if 0 <= map_y < self.maze_height and 0 <= map_x < self.maze_width:
-                if self.maze_data[map_y][map_x] == 1:
+                if self.maze_data[map_y][map_x] == 1 or (map_x == self.end_coord[0] and map_y == self.end_coord[1]):
                     hit = True
                     final_hit_map_x, final_hit_map_y = map_x, map_y
                     break
@@ -149,14 +145,14 @@ class GameLogic:
         
         return ray_hit_distance, final_hit_map_x, final_hit_map_y, hit_side
 
-    def _draw_walls_raycasting(self):
+    def draw_walls_raycasting(self):
         player_x, player_y, player_angle = self.player.x, self.player.y, self.player.angle
         end_x, end_y = self.end_coord[0], self.end_coord[1]
         
         ray_angle = player_angle - (self.fov / 2)
 
         for ray_idx in range(self.screen_width):
-            ray_hit_distance, hit_map_x, hit_map_y, hit_side = self._cast_single_ray(player_x, player_y, ray_angle)
+            ray_hit_distance, hit_map_x, hit_map_y, hit_side = self.cast_single_ray(player_x, player_y, ray_angle)
             
             perp_dist_for_3d = ray_hit_distance * math.cos(ray_angle - player_angle)
             
@@ -172,13 +168,7 @@ class GameLogic:
 
             base_color = Constants.WALL_COLOR
 
-            is_end_wall = False
-            if hit_map_x != -1 and hit_map_y != -1 and \
-               0 <= hit_map_y < self.maze_height and 0 <= hit_map_x < self.maze_width:
-                if self._is_adjacent_to_point(hit_map_x, hit_map_y, end_x, end_y):
-                    is_end_wall = True
-
-            if is_end_wall:
+            if hit_map_x == end_x and hit_map_y == end_y:
                 pulse_factor = (math.sin(pygame.time.get_ticks() / 200.0) + 1.0) / 2.0
                 
                 r = int(Constants.END_WALL_COLOR[0] * (1 - pulse_factor) + Constants.END_WALL_GLOW_COLOR[0] * pulse_factor)
@@ -217,51 +207,3 @@ class GameLogic:
         text_rect.bottomleft = (padding, self.screen_height - padding)
 
         self.window.blit(text_surface, text_rect)
-
-    def draw_temp(self):
-        scale = 25
-
-        for y, row in enumerate(self.maze_data):
-            for x, col in enumerate(row):
-                if col == 1:
-                    pygame.draw.rect(self.window, (255, 255, 255), (x * scale, y * scale, scale, scale))
-
-        start = self.maze["startCoordinate"]
-        pygame.draw.rect(self.window, (0, 255, 0), (start[0] * scale, start[1] * scale, scale, scale))
-        end = self.maze["endCoordinate"]
-        pygame.draw.rect(self.window, (255, 0, 0), (end[0] * scale, end[1] * scale, scale, scale))
-
-        pos_x = self.player.x
-        pos_y = self.player.y
-
-        pygame.draw.circle(self.window, (255, 0, 0), (int(pos_x * scale), int(pos_y * scale)), 5)
-        
-        num_rays_2d_viz = 50 
-        angle_increment_2d_viz = self.fov / num_rays_2d_viz
-        ray_angle_2d_viz = self.player.angle - (self.fov / 2)
-
-        for _ in range(num_rays_2d_viz):
-            ray_angle_2d_viz %= (2 * math.pi)
-            
-            ray_hit_distance, hit_map_x, hit_map_y, hit_side = self._cast_single_ray(pos_x, pos_y, ray_angle_2d_viz)
-            
-            DEPTH_LINE_MAX_LENGTH_2D = 10
-
-            normalized_distance = ray_hit_distance / Constants.MAX_RAY_DISTANCE 
-            depth_line_length = max(1, int(DEPTH_LINE_MAX_LENGTH_2D * (1 - normalized_distance)))
-
-            hit_screen_x = int(pos_x * scale + (ray_hit_distance * scale * math.cos(ray_angle_2d_viz)))
-            hit_screen_y = int(pos_y * scale + (ray_hit_distance * scale * math.sin(ray_angle_2d_viz)))
-
-            pygame.draw.line(self.window, (255, 255, 0), 
-                             (hit_screen_x, hit_screen_y - depth_line_length // 2), 
-                             (hit_screen_x, hit_screen_y + depth_line_length // 2), 1)
-
-            pygame.draw.line(self.window, (100, 100, 255),
-                             (int(pos_x * scale), int(pos_y * scale)), 
-                             (hit_screen_x, hit_screen_y), 1)
-            
-            ray_angle_2d_viz += angle_increment_2d_viz
-
-    def draw_mini_map(self):
-        self.draw_temp()

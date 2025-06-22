@@ -41,7 +41,7 @@ class Engine:
 
         self.clock = pygame.time.Clock()
         self.running = False
-        self.state = GameState.MAIN_MENU ######
+        self.state = GameState.SPLASH
 
         self.splash_screen = SplashScreen(self.window)
         self.main_menu = MainMenu(self.window)

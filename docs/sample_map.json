@@ -1,0 +1,18 @@
+{
+  "mazeName": "Sample file for map",
+  "mazeData": [
+    [1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 1],
+    [1, 0, 0, 0, 1],
+    [1, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1]
+  ],
+  "startCoordinate": [1, 1],
+  "endCoordinate": [3, 3],
+  "scoreboard": [],
+  "metadata": {
+    "creatorName": "Uzair",
+    "creatorContact": "",
+    "description": "0 means empty space and 1 means wall"
+  }
+}
