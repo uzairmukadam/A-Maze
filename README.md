@@ -56,7 +56,11 @@ To get started with A-Maze, follow these simple steps:
 
 2. **Install Pygame:**
 
-3. **Run the game:**
+   ```pip install pygame```
+
+4. **Run the game:**
+
+   ```python run.py```
 
 ## 🗂 Game Instructions
 
